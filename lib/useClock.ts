@@ -139,7 +139,7 @@ const ClockNumber = {
 /**
  * @description controller
  */
-class UseClock {
+export class UseClock {
     #dialCvs: HTMLCanvasElement
     #pointerCvs: HTMLCanvasElement
     readonly #config: ClockConfig
@@ -304,8 +304,4 @@ class UseClock {
     stopTick() {
         clearInterval(this.#timerId)
     }
-}
-
-export {
-    UseClock
 }
