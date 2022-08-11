@@ -6,8 +6,8 @@
     "main": "lib/index.ts",
     "scripts": {
         "dev:dist": "vite --host",
-        "build:dist": "cross-env OUTDIR=dist vue-tsc --noEmit && vite build",
-        "build:docs": "cross-env OUTDIR=docs vue-tsc --noEmit && vite build",
+        "build:dist": "vue-tsc --noEmit && cross-env OUTDIR=dist vite build",
+        "build:docs": "vue-tsc --noEmit && cross-env OUTDIR=docs vite build",
         "preview": "vite preview"
     },
     "dependencies": {

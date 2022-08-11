@@ -7,6 +7,7 @@ export default defineConfig({
     server: {
         port: 34345
     },
+    base: './',
     build: {
         outDir: process.env.OUTDIR || 'dist'
     }

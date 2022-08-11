@@ -3,7 +3,7 @@ import { nextTick, onBeforeUnmount, ref, shallowRef, watch } from "vue";
 import Vue3Clock, { ClockConfig, DefaultConfig, UseClock } from "../lib"
 
 type DashboardConfigType = {
-    [k in keyof ClockConfig]?:
+    [k in keyof Omit<ClockConfig, 'hourTail' | 'minuteTail' | 'secondTail'>]:
     {
         type: 'number' | 'color' | 'enum'
         range?: [ number, number ]
@@ -114,6 +114,11 @@ const ready = (_clock: UseClock) => {
 }
 
 const dashboardBindData = ref<ClockConfig>({ ...DefaultConfig })
+const updateEnums = (key: string, value: any) => {
+    // @ts-ignore
+    dashboardBindData.value[key] = value
+    update()
+}
 const update = () => {
     clock.value?.rerender(dashboardBindData.value)
     console.log('[v3clock] re-render')
@@ -157,7 +162,7 @@ onBeforeUnmount(() => {
                      v-if="configItem.type === 'enum'">
                     <div :class="dashboardBindData[key] === opt.value ? 'optional-item__active' : 'optional-item'"
                          v-for="(opt, optIdx) in configItem.enums" :key="optIdx"
-                         @click="dashboardBindData[key] = opt.value; update()">
+                         @click="updateEnums(key, opt.value)">
                         {{ opt.label }}
                     </div>
                 </div>
