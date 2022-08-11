@@ -1,4 +1,4 @@
-import { minmax, shallowMerge } from "./util";
+import { fixStringToNumber, minmax, shallowMerge } from "./util";
 
 /**
  * @description 样式配置项
@@ -68,6 +68,7 @@ export interface ClockConfig {
     minutePercent: number
     /**
      * @description 分针反向长度 (px)
+     * @deprecated 未实现
      * @default 4
      */
     minuteTail: number
@@ -88,6 +89,7 @@ export interface ClockConfig {
     secondPercent: number
     /**
      * @description 秒针反向长度 (px)
+     * @deprecated 未实现
      * @default 5
      */
     secondTail: number
@@ -138,12 +140,30 @@ const ClockNumber = {
 
 /**
  * @description controller
+ * @example
+ * // canvas 容器
+ * const dialCanvas: HTMLCanvasElement = document.getElementById('dial')
+ * const pointerCanvas: HTMLCanvasElement = document.getElementById('pointer')
+ * // 实例化
+ * const clock = new UseClock()
+ * // 启动
+ * clock.tick()
+ *
+ * // 暂停
+ * clock.stop()
+ *
+ * // 更新
+ * const configToUpdate = { ... }
+ * clock.rerender(configToUpdate)
+ *
+ * // 销毁
+ * clock.dispose()
  */
 export class UseClock {
     #dialCvs: HTMLCanvasElement
     #pointerCvs: HTMLCanvasElement
-    readonly #config: ClockConfig
-    #timerId: any
+    #config: ClockConfig
+    #timerId: any = -1
 
     private static setStroke(
         ctx: CanvasRenderingContext2D,
@@ -171,54 +191,23 @@ export class UseClock {
         return { h, m, s }
     }
 
+    /**
+     * @description
+     * @param dialCanvas 表盘画布
+     * @param pointerCanvas 指针画布
+     * @param clockConfig 配置项
+     * @param autoTick 是否立即启动
+     */
     constructor(
         dialCanvas: HTMLCanvasElement,
         pointerCanvas: HTMLCanvasElement,
-        clockConfig?: Partial<ClockConfig>) {
+        clockConfig?: Partial<ClockConfig>,
+        autoTick: boolean = true) {
         this.#dialCvs = dialCanvas
         this.#pointerCvs = pointerCanvas
-        this.#config = clockConfig ? shallowMerge(clockConfig, DefaultConfig) : DefaultConfig
-    }
+        this.#config = clockConfig ? shallowMerge(fixStringToNumber(clockConfig), DefaultConfig) : DefaultConfig
 
-    renderDial(): UseClock {
-        const ctx = this.#dialCvs.getContext('2d')!
-        const { dialRadius, dialStroke, dialStrokeWidth } = this.#config ?? DefaultConfig
-
-        // 表盘外圈
-        ctx.beginPath()
-        ctx.arc(dialRadius, dialRadius, dialRadius - dialStrokeWidth, 0, Math.PI * 2)
-        UseClock.setStroke(ctx, dialStroke, dialStrokeWidth)
-            .stroke()
-        ctx.closePath()
-
-        // 数字
-        const { numberShow, numberText, numberStyle, numberColor } = this.#config
-        if(numberShow) {
-            const fontSize = minmax(0.16 * dialRadius, 12, 24)
-            const fontRadius = dialRadius - fontSize
-            ctx.beginPath()
-            ctx.font = `${ fontSize }px san-serif`
-            ctx.textAlign = 'center'
-            if(numberStyle === 'stroke') {
-                UseClock.setStroke(ctx, numberColor, 0.5)
-                ClockNumber[numberText].forEach((txt, idx) => {
-                    const _x = dialRadius + parseFloat((fontRadius * Math.sin(Math.PI / 6 * idx)).toFixed(2))
-                    const _y = dialRadius + fontSize / 2 + parseFloat((fontRadius * -Math.cos(Math.PI / 6 * idx)).toFixed(2))
-                    ctx.strokeText(txt, _x, _y, fontSize)
-                })
-            }
-            else {
-                UseClock.setFill(ctx, numberColor)
-                ClockNumber[numberText].forEach((txt, idx) => {
-                    const _x = dialRadius + parseFloat((fontRadius * Math.sin(Math.PI / 6 * idx)).toFixed(2))
-                    const _y = dialRadius + fontSize / 2 + parseFloat((fontRadius * -Math.cos(Math.PI / 6 * idx)).toFixed(2))
-                    ctx.fillText(txt, _x, _y, fontSize)
-                })
-            }
-            ctx.closePath()
-        }
-
-        return this
+        if(autoTick) this.renderDial().tick()
     }
 
     private clearCanvas(ctx: CanvasRenderingContext2D) {
@@ -294,14 +283,99 @@ export class UseClock {
             .renderSec(ctx, s)
     }
 
-    renderPointer() {
-        this.renderHMS()
-        this.#timerId = setInterval(() => {
-            this.renderHMS()
-        }, 1000)
+    private renderDial(): UseClock {
+        const ctx = this.#dialCvs.getContext('2d')!
+        const { dialRadius, dialStroke, dialStrokeWidth } = this.#config ?? DefaultConfig
+
+        // 表盘外圈
+        ctx.beginPath()
+        ctx.arc(dialRadius, dialRadius, dialRadius - dialStrokeWidth, 0, Math.PI * 2)
+        UseClock.setStroke(ctx, dialStroke, dialStrokeWidth)
+            .stroke()
+        ctx.closePath()
+
+        // 数字
+        const { numberShow, numberText, numberStyle, numberColor } = this.#config
+        if(numberShow) {
+            const fontSize = minmax(0.16 * dialRadius, 12, 24)
+            const fontRadius = dialRadius - fontSize
+            ctx.beginPath()
+            ctx.font = `${ fontSize }px san-serif`
+            ctx.textAlign = 'center'
+            if(numberStyle === 'stroke') {
+                UseClock.setStroke(ctx, numberColor, 0.5)
+                ClockNumber[numberText].forEach((txt, idx) => {
+                    const _x = dialRadius + parseFloat((fontRadius * Math.sin(Math.PI / 6 * idx)).toFixed(2))
+                    const _y = dialRadius + fontSize / 2 + parseFloat((fontRadius * -Math.cos(Math.PI / 6 * idx)).toFixed(2))
+                    ctx.strokeText(txt, _x, _y, fontSize)
+                })
+            }
+            else {
+                UseClock.setFill(ctx, numberColor)
+                ClockNumber[numberText].forEach((txt, idx) => {
+                    const _x = dialRadius + parseFloat((fontRadius * Math.sin(Math.PI / 6 * idx)).toFixed(2))
+                    const _y = dialRadius + fontSize / 2 + parseFloat((fontRadius * -Math.cos(Math.PI / 6 * idx)).toFixed(2))
+                    ctx.fillText(txt, _x, _y, fontSize)
+                })
+            }
+            ctx.closePath()
+        }
+
+        return this
     }
 
-    stopTick() {
-        clearInterval(this.#timerId)
+    private updateConfig(partialConfig: Partial<ClockConfig>): UseClock {
+        this.#config = shallowMerge(fixStringToNumber(partialConfig), this.#config)
+        return this
+    }
+
+    /**
+     * @description 启动
+     * @description 实例化后调用此方法渲染并启动
+     * @see rerender
+     */
+    tick(): UseClock {
+        if(this.#timerId === -1) {
+            this.renderHMS()
+            this.#timerId = setInterval(() => {
+                this.renderHMS()
+            }, 1000)
+        }
+        return this
+    }
+
+    /**
+     * @description 停止
+     * @see tick
+     */
+    stop(): UseClock {
+        if(this.#timerId !== -1) {
+            clearInterval(this.#timerId)
+            this.#timerId = -1
+        }
+        return this
+    }
+
+    /**
+     * @description 更新配置项, 重新渲染并启动
+     */
+    rerender(partialConfig: Partial<ClockConfig>) {
+        this.dispose()
+            .updateConfig(partialConfig)
+            .renderDial()
+            .tick()
+    }
+
+    /**
+     * @description 清空画布和计时器 (可重新调用 tick 或 rerender 再次绘制)
+     */
+    dispose(): UseClock {
+        const ctx_pointer = this.#pointerCvs.getContext('2d')!
+        const ctx_dial = this.#dialCvs.getContext('2d')!
+
+        this.stop()
+            .clearCanvas(ctx_dial)
+            .clearCanvas(ctx_pointer)
+        return this
     }
 }
