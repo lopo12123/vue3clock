@@ -22,15 +22,12 @@ onMounted(() => {
 
     if(dialCanvas && pointerCanvas) {
         const _clock = new UseClock(dialCanvas, pointerCanvas, props.config)
-        _clock.renderDial()
-            .renderPointer()
         clock.value = _clock
-
         emits('clock-ready', _clock)
     }
 })
 onBeforeUnmount(() => {
-    clock.value?.stopTick()
+    clock.value?.dispose()
 })
 </script>
 
